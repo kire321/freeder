@@ -20,7 +20,7 @@
 //    cache fallback when offline. Hashed assets and images are cache-first.
 //
 // BUILD: 2026-11-24-04
-const CACHE_NAME = 'freeder-2026-11-24-05';
+const CACHE_NAME = 'freeder-2026-11-26-01';
 const VERSION = '2026-11-24-04';
 const CONTENT_CACHE_NAME = 'freeder-content-v1';
 
