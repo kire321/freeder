@@ -9,8 +9,12 @@
 // 3. Strip Vary on write + ignoreVary on read. Vary: Origin makes entries
 //    cached via one request kind (img, cache.match, SW Request) invisible to
 //    the others — cached images still 503 offline.
-// 4. ignoreSearch fallback on SERVING (an image cached under any ?v= stamp
-//    still renders), but query-SENSITIVE checks when deciding to fetch.
+// 4. ignoreSearch fallback on SERVING is IMAGE-ONLY (an image cached under
+//    any ?v= stamp still renders). NEVER for fetch()/navigation requests:
+//    the query string IS the identity of proxied feed/article fetches
+//    (?url=...), and an ignoreSearch hit serves the first cached proxy
+//    response for every feed — every feed shows the same articles.
+//    2026-11-28: this bug made all 49 real feeds sync to jasmi's content.
 // 5. Article images are fetched NO-CORS (no crossorigin attr on <img>): most
 //    image hosts send no ACAO, so cors-mode fetches fail; opaque responses are
 //    Cache-API-cacheable and display fine in <img>.
@@ -19,9 +23,9 @@
 // 7. Navigations are NETWORK-FIRST (fresh app on every visit when online) with
 //    cache fallback when offline. Hashed assets and images are cache-first.
 //
-// BUILD: 2026-11-28-01
-const CACHE_NAME = 'freeder-2026-11-28-01';
-const VERSION = '2026-11-28-01';
+// BUILD: 2026-11-28-02
+const CACHE_NAME = 'freeder-2026-11-28-02';
+const VERSION = '2026-11-28-02';
 const CONTENT_CACHE_NAME = 'freeder-content-v1';
 
 // Assets cached at install, each INDIVIDUALLY (Promise.allSettled semantics:
@@ -85,22 +89,27 @@ function freederCaches(names) {
   return names.filter((n) => n.startsWith('freeder'));
 }
 
-// SERVING lookup: current cache first (exact, then ignoreSearch), then legacy
-// caches. Any cached variant of an image satisfies the request.
+// SERVING lookup: current cache first (exact, then — for images only —
+// ignoreSearch), then legacy caches. Any cached variant of an image satisfies
+// the request; everything else must match the exact URL because the query
+// string carries the request's identity (proxied fetches especially).
 async function findInAnyCache(request) {
+  // Images: ?v= stamp variants all mean the same picture.
+  // Fetch()/navigation: the query IS the identity — never ignore it.
+  const allowIgnoreSearch = request.destination === 'image';
   const names = freederCaches(await caches.keys()).filter((n) => n !== CONTENT_CACHE_NAME);
   const current = names.find((n) => n === CACHE_NAME);
   if (current) {
     const cache = await caches.open(current);
     const match = await cache.match(request, { ignoreVary: true })
-      || await cache.match(request, { ignoreVary: true, ignoreSearch: true });
+      || (allowIgnoreSearch && await cache.match(request, { ignoreVary: true, ignoreSearch: true }));
     if (match) return { response: match, cacheName: current, isCurrent: true };
   }
   for (const name of names) {
     if (name === CACHE_NAME) continue;
     const cache = await caches.open(name);
     const match = await cache.match(request, { ignoreVary: true })
-      || await cache.match(request, { ignoreVary: true, ignoreSearch: true });
+      || (allowIgnoreSearch && await cache.match(request, { ignoreVary: true, ignoreSearch: true }));
     if (match) return { response: match, cacheName: name, isCurrent: false };
   }
   return null;
