@@ -19,9 +19,9 @@
 // 7. Navigations are NETWORK-FIRST (fresh app on every visit when online) with
 //    cache fallback when offline. Hashed assets and images are cache-first.
 //
-// BUILD: 2026-11-24-04
-const CACHE_NAME = 'freeder-2026-11-26-01';
-const VERSION = '2026-11-24-04';
+// BUILD: 2026-11-28-01
+const CACHE_NAME = 'freeder-2026-11-28-01';
+const VERSION = '2026-11-28-01';
 const CONTENT_CACHE_NAME = 'freeder-content-v1';
 
 // Assets cached at install, each INDIVIDUALLY (Promise.allSettled semantics:
